@@ -13,7 +13,7 @@ def serialize_post(post):
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
-        'tags': [serialize_tag(tag) for tag in Tag.objects.popular()[:5]],
+        'tags': post.tags.all(),
         'first_tag_title': post.tags.first().title,
     }
 
@@ -40,23 +40,28 @@ def index(request):
 
 def post_detail(request, slug):
     post = Post.objects.get(slug=slug)
-    comments = post.comments.all()
-    likes = post.likes.all()
-    related_tags = post.tags.all()
+
+    serialized_comments = []
+    for comment in post.comments.all().prefetch_related('author'):
+        serialized_comments.append({
+            'text': comment.text,
+            'published_at': comment.published_at,
+            'author': comment.author.username,
+        })
 
     serialized_post = {
         'title': post.title,
         'text': post.text,
         'author': post.author,
-        'comments': comments,
-        'likes_amount': len(likes),
+        'comments': serialized_comments,
+        'likes_amount': post.likes.count(),
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
-        'tags': [serialize_tag(tag) for tag in related_tags],
+        'tags': post.tags.all(),
     }
 
-    most_popular_tags = Tag.objects.popular()
+    most_popular_tags = Tag.objects.popular()[:5]
     most_popular_posts = Post.objects.popular().fetch_with_comments_count()[:5]
 
     context = {
@@ -71,7 +76,7 @@ def post_detail(request, slug):
 
 def tag_filter(request, tag_title):
     tag = Tag.objects.get(title=tag_title)
-    most_popular_tags = Tag.objects.popular()
+    most_popular_tags = Tag.objects.popular()[:5]
     most_popular_posts = Post.objects.popular().fetch_with_comments_count()[:5]
     related_posts = Post.objects.popular().fetch_with_comments_count()[:20]
 
