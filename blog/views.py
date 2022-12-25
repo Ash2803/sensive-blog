@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 from blog.models import Post, Tag
 
@@ -7,7 +7,7 @@ def serialize_post(post):
     return {
         'title': post.title,
         'teaser_text': post.text[:200],
-        'author': post.author.username,
+        'author': post.author,
         'comments_amount': post.comments_count,
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
@@ -38,7 +38,7 @@ def index(request):
 
 
 def post_detail(request, slug):
-    post = Post.objects.get(slug=slug)
+    post = get_object_or_404(Post, slug=slug)
 
     serialized_comments = []
     for comment in post.comments.all().prefetch_related('author'):
@@ -74,7 +74,7 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
-    tag = Tag.objects.get(title=tag_title)
+    tag = get_object_or_404(Tag, title=tag_title)
     most_popular_tags = Tag.objects.popular()[:5]
     most_popular_posts = Post.objects.popular().fetch_with_comments_count()[:5]
     related_posts = Post.objects.popular().fetch_with_comments_count()[:20]
